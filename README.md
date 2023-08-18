@@ -11,7 +11,7 @@ Create a .env file and set up the environment variables.
 ```
 # .env
 
-TWITCH_CLIENT_ID={YOUR_CLIENT_ID}
+TWITCH_CLIENT_ID = {YOUR_CLIENT_ID}
 TWITCH_CLIENT_SECRET = {YOUR_CLIENT_SECRET}
 TWITCH_CHANNEL_NAME = {CHANNEL_NAME}
 ```

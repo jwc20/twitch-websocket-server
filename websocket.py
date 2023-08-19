@@ -112,7 +112,10 @@ if __name__ == "__main__":
     # For local websocket server
     loop = asyncio.get_event_loop()
     loop.create_task(receive_chat_messages())  # Twitch Chat Receiver
-    server = websockets.serve(ws_handler, "127.0.0.1", 5678)  # Start WebSocket Server
+    server = websockets.serve(ws_handler, "0.0.0.0", 8080) # Start WebSocket Server
+    # server = websockets.serve(ws_handler, "127.0.0.1", 5678)  
+    # server = websockets.serve(ws_handler, "localhost", 5678)
+
     print("Websocket server address: ", server)
     loop.run_until_complete(server)
     loop.run_forever()

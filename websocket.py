@@ -15,25 +15,15 @@ load_dotenv()
 # Twitch Configurations
 CLIENT_ID = os.environ.get("TWITCH_CLIENT_ID")
 CLIENT_SECRET = os.environ.get("TWITCH_CLIENT_SECRET")
-CHANNEL_NAME = os.environ.get("TWITCH_CHANNEL_NAME")
-print(
-    f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}, CHANNEL_NAME: {CHANNEL_NAME}"
-)
+# CHANNEL_NAME = os.environ.get("TWITCH_CHANNEL_NAME")
+CHANNEL_NAME = "zackrawrr"
 
-MAX_MESSAGES = 100
-messages_queue = deque(maxlen=MAX_MESSAGES)
+print(
+    f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}"
+)
 
 # Client Set for Websockets
 clients = set()
-
-# DO NOT REMOVE.
-# Ably Configuration
-# ably = AblyRest(os.environ.get("ABLY_API_KEY"))
-
-
-# async def forward_to_ably_clients(message):
-#     channel = ably.channels.get("twitch-chat")
-#     await channel.publish("message", message)
 
 
 async def get_oauth_token(client_id, client_secret):
@@ -41,6 +31,7 @@ async def get_oauth_token(client_id, client_secret):
     async with aiohttp.ClientSession() as session:
         async with session.post(url) as response:
             data = await response.json()
+            # print(data["access_token"])
             return data["access_token"]
 
 
@@ -77,6 +68,7 @@ async def receive_chat_messages():
     while True:
         try:
             async with websockets.connect(websocket_url) as websocket:
+                print(websocket_url)
                 await websocket.send(f"PASS oauth:{token}")
                 await websocket.send(f"NICK justinfan123")  # for read-only
                 await websocket.send(f"JOIN #{CHANNEL_NAME}")
@@ -89,6 +81,7 @@ async def receive_chat_messages():
                         if match:
                             after_end_of_names = True
                         continue
+                    
                     # Extracting chat messages for forwarding
                     match_nick = re.search(r"@(\w+)\.tmi\.twitch\.tv", message)
                     match_chat = re.search(r"PRIVMSG #\w+ :(.*)", message)
@@ -100,7 +93,6 @@ async def receive_chat_messages():
                     print(formatted_message)
 
                     await forward_to_clients(formatted_message)
-                    # await forward_to_ably_clients(formatted_message)
 
         except Exception as e:
             print(f"WebSocket Error: {e}")
@@ -112,16 +104,11 @@ if __name__ == "__main__":
     # For local websocket server
     loop = asyncio.get_event_loop()
     loop.create_task(receive_chat_messages())  # Twitch Chat Receiver
-    server = websockets.serve(ws_handler, "0.0.0.0", 8080) # Start WebSocket Server
-    # server = websockets.serve(ws_handler, "127.0.0.1", 5678)  
+    # server = websockets.serve(ws_handler, "0.0.0.0", 8080) # Start WebSocket Server
+    server = websockets.serve(ws_handler, "127.0.0.1", 8080)  
     # server = websockets.serve(ws_handler, "localhost", 5678)
 
     print("Websocket server address: ", server)
     loop.run_until_complete(server)
     loop.run_forever()
-
-    # For ably client.
-    # loop = asyncio.get_event_loop()
-    # loop.create_task(receive_chat_messages())
-    # loop.run_forever()
 

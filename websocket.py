@@ -7,8 +7,10 @@ import websockets
 
 
 from datetime import datetime
-from collections import deque
+# from collections import deque
+from collections import namedtuple
 from dotenv import load_dotenv
+
 
 load_dotenv()
 
@@ -64,6 +66,10 @@ async def ws_handler(websocket, path):
 
 async def receive_chat_messages():
     token = await get_oauth_token(CLIENT_ID, CLIENT_SECRET)
+    
+    chat_log = []
+    Chat = namedtuple("Chat", ["username", "chat_message", "timestamp"])
+    
     websocket_url = f"wss://irc-ws.chat.twitch.tv:443"
     while True:
         try:
@@ -74,6 +80,9 @@ async def receive_chat_messages():
                 await websocket.send(f"JOIN #{CHANNEL_NAME}")
                 after_end_of_names = False
                 while True:
+                    
+                    # TODO: Check for stream start message.
+                    
                     message = await websocket.recv()
                     message = message.strip().replace("\n", "")
                     if not after_end_of_names:
@@ -85,13 +94,18 @@ async def receive_chat_messages():
                     # Extracting chat messages for forwarding
                     match_nick = re.search(r"@(\w+)\.tmi\.twitch\.tv", message)
                     match_chat = re.search(r"PRIVMSG #\w+ :(.*)", message)
-                    current_time = datetime.now().strftime("%H:%M:%S")
+                    
+                    timestamp = datetime.now().strftime("%H:%M:%S")
+                    
                     username = match_nick.group(1) if match_nick else ""
                     chat_message = match_chat.group(1) if match_chat else ""
-                    formatted_message = f"[{current_time}] <{username}> {chat_message}"
+                    
+                    formatted_message = f"[{timestamp}] <{username}> {chat_message}"
 
-                    print(formatted_message)
-
+                    # print(formatted_message)
+                    chat_log.append(Chat(username=username, chat_message=chat_message, timestamp=timestamp))
+                    print(chat_log)
+                                    
                     await forward_to_clients(formatted_message)
 
         except Exception as e:

@@ -3,7 +3,8 @@ import re
 import asyncio
 import aiohttp
 import websockets
-# from ably import AblyRest
+import signal
+import json
 
 
 from datetime import datetime
@@ -26,6 +27,8 @@ print(
 
 # Client Set for Websockets
 clients = set()
+
+chat_log = []
 
 
 async def get_oauth_token(client_id, client_secret):
@@ -66,10 +69,6 @@ async def ws_handler(websocket, path):
 
 async def receive_chat_messages():
     token = await get_oauth_token(CLIENT_ID, CLIENT_SECRET)
-    
-    chat_log = []
-    Chat = namedtuple("Chat", ["username", "chat_message", "timestamp"])
-    
     websocket_url = f"wss://irc-ws.chat.twitch.tv:443"
     while True:
         try:
@@ -91,29 +90,39 @@ async def receive_chat_messages():
                             after_end_of_names = True
                         continue
                     
+
                     # Extracting chat messages for forwarding
                     match_nick = re.search(r"@(\w+)\.tmi\.twitch\.tv", message)
                     match_chat = re.search(r"PRIVMSG #\w+ :(.*)", message)
-                    
+
                     timestamp = datetime.now().strftime("%H:%M:%S")
-                    
+
                     username = match_nick.group(1) if match_nick else ""
                     chat_message = match_chat.group(1) if match_chat else ""
-                    
+
                     formatted_message = f"[{timestamp}] <{username}> {chat_message}"
+                    print(formatted_message)
 
-                    # print(formatted_message)
-                    chat_log.append(Chat(username=username, chat_message=chat_message, timestamp=timestamp))
-                    print(chat_log)
-                                    
+                    chat_dict = {"username": username, "chat_message": chat_message, "timestamp": timestamp}
+                    chat_log.append(chat_dict)
+
                     await forward_to_clients(formatted_message)
-
         except Exception as e:
             print(f"WebSocket Error: {e}")
             print("Reconnecting...")
             await asyncio.sleep(5)
 
 
+def save_chat_log_to_json():
+    with open('chat_log.json', 'w') as file:
+        json.dump(chat_log, file)
+
+
+def shutdown_server(signum, frame):
+    save_chat_log_to_json()
+    os._exit(0)
+
+    
 if __name__ == "__main__":
     # For local websocket server
     loop = asyncio.get_event_loop()
@@ -121,6 +130,10 @@ if __name__ == "__main__":
     # server = websockets.serve(ws_handler, "0.0.0.0", 8080) # Start WebSocket Server
     server = websockets.serve(ws_handler, "127.0.0.1", 8080)  
     # server = websockets.serve(ws_handler, "localhost", 5678)
+
+    # register signal handler for graceful shutdown
+    signal.signal(signal.SIGINT, shutdown_server)
+    signal.signal(signal.SIGTERM, shutdown_server)
 
     print("Websocket server address: ", server)
     loop.run_until_complete(server)

@@ -3,4 +3,4 @@ python-dotenv
 asyncio
 aiohttp
 websockets
-
+vowpal-wabbit-next

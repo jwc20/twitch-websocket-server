@@ -19,10 +19,15 @@ load_dotenv()
 CLIENT_ID = os.environ.get("TWITCH_CLIENT_ID")
 CLIENT_SECRET = os.environ.get("TWITCH_CLIENT_SECRET")
 # CHANNEL_NAME = os.environ.get("TWITCH_CHANNEL_NAME")
-CHANNEL_NAME = "zackrawrr"
+CHANNEL_NAME = "summit1g"
 
 print(
     f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}"
+)
+
+
+print(
+    f"CONNECTING TO: {CHANNEL_NAME}'s CHAT"
 )
 
 # Client Set for Websockets
@@ -94,19 +99,22 @@ async def receive_chat_messages():
                     # Extracting chat messages for forwarding
                     match_nick = re.search(r"@(\w+)\.tmi\.twitch\.tv", message)
                     match_chat = re.search(r"PRIVMSG #\w+ :(.*)", message)
-
-                    timestamp = datetime.now().strftime("%H:%M:%S")
-
+                    
+                    timestamp = datetime.now()
+                    timestamp_isoformatted = timestamp.isoformat()
+                    timestamp_formatted = timestamp.strftime("%H:%M:%S")
+                    
                     username = match_nick.group(1) if match_nick else ""
                     chat_message = match_chat.group(1) if match_chat else ""
 
-                    formatted_message = f"[{timestamp}] <{username}> {chat_message}"
+                    formatted_message = f"[{timestamp_formatted}] <{username}> {chat_message}"
                     print(formatted_message)
 
-                    chat_dict = {"username": username, "chat_message": chat_message, "timestamp": timestamp}
+                    chat_dict = {"username": username, "chat_message": chat_message, "timestamp": timestamp_isoformatted}
                     chat_log.append(chat_dict)
 
                     await forward_to_clients(formatted_message)
+                    
         except Exception as e:
             print(f"WebSocket Error: {e}")
             print("Reconnecting...")

@@ -1,3 +1,6 @@
+.vscode
+
+credentials.json
 firebase-adminsdk.json
 
 # Byte-compiled / optimized / DLL files

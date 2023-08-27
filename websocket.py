@@ -28,8 +28,16 @@ from datetime import datetime
 # from collections import namedtuple
 from dotenv import load_dotenv
 
-# import firebase_admin
-# from firebase_admin import credentials
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import firestore
+
+# Use a service account.
+cred = credentials.Certificate('credentials.json')
+
+app = firebase_admin.initialize_app(cred)
+
+db = firestore.client()
 
 # cred = credentials.Certificate("credentials.json")
 # firebase_admin.initialize_app(cred, {"databaseURL": "https://omfscene24-default-rtdb.firebaseio.com/"})
@@ -75,8 +83,6 @@ def preprocess_chat_message(sentence):
 
 async def predict_toxicity(preprocessed_chat_message, model_path="model.vw"):
     """Predict the toxicity of a message using Vowpal Wabbit."""
-    # Prepare the message in the format VW expects.
-    # NOTE: This assumes you trained VW with messages in some specific format. Adjust as necessary.
     vw_formatted_message = f"|text {preprocessed_chat_message}"
 
     # Run VW for prediction
@@ -98,12 +104,7 @@ async def predict_toxicity(preprocessed_chat_message, model_path="model.vw"):
 
     # Parse the output to get prediction
     prediction = float(result.stdout.decode("utf-8").strip())
-
-    print(vw_formatted_message, prediction)
-
-    # Convert the prediction to -1 or 1 based on some threshold.
-    # NOTE: This assumes you're using logistic link function with VW, and uses 0.5 as a threshold.
-    return -1 if prediction < 0.5 else 1
+    return prediction
 
 
 async def get_oauth_token(client_id, client_secret):
@@ -144,6 +145,7 @@ async def ws_handler(websocket, path):
 
 async def receive_chat_messages():
     token = await get_oauth_token(CLIENT_ID, CLIENT_SECRET)
+ 
     websocket_url = f"wss://irc-ws.chat.twitch.tv:443"
     while True:
         try:
@@ -175,25 +177,36 @@ async def receive_chat_messages():
                     username = match_nick.group(1) if match_nick else ""
                     chat_message = match_chat.group(1) if match_chat else ""
                     preprocessed_chat_message = preprocess_chat_message(chat_message)
-                    toxicity = await predict_toxicity(preprocessed_chat_message) # => 1 not toxic | -1 toxic
-
-                    formatted_message = (
-                        f"[{timestamp_formatted}] <{username}> {chat_message}"
-                    )
-                    print(formatted_message)
+                    vw_toxicity_score = await predict_toxicity(preprocessed_chat_message) # => 1 not toxic | -1 toxic
+                    toxicity_boolean = True if vw_toxicity_score < 0.5 else False # this may need adjustment
+                    
+                    formatted_message = (f"[{timestamp_formatted}] <{username}> {chat_message}")
 
                     chat_dict = {
                         "username": username,
                         "chat_message": chat_message,
                         "preprocessed_chat_message": preprocessed_chat_message,
                         "timestamp": timestamp_isoformatted,
-                        "toxicity": toxicity,
+                        "vw_toxicity_score": vw_toxicity_score,
+                        "is_toxic": toxicity_boolean,
                         "channel_name": CHANNEL_NAME,
                     }
                     chat_log.append(chat_dict)
+                    
 
-                    # print(chat_log)
+                    # store to firebase
+                    now = datetime.now()
+                    formatted_date_time = now.strftime("%Y%m%d_%H%M")
+                    # db.collection(CHANNEL_NAME).document("").set(chat_dict)    
+                                    
+                    # Store to firestore
+                    doc_ref = db.collection(CHANNEL_NAME).document()
+                    doc_ref.set(chat_dict)
+                    
+                    
+                    print(formatted_message, vw_toxicity_score, toxicity_boolean)
 
+                    # send to client ui
                     await forward_to_clients(formatted_message)
 
         except Exception as e:

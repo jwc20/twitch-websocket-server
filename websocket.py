@@ -5,10 +5,13 @@ import aiohttp
 import websockets
 import signal
 import json
+
 # import spacy
 import spacy
+
 nlp = spacy.load("en_core_web_sm")
 import en_core_web_sm
+
 nlp = en_core_web_sm.load()
 
 import pandas as pd
@@ -40,7 +43,7 @@ CLIENT_ID = os.environ.get("TWITCH_CLIENT_ID")
 CLIENT_SECRET = os.environ.get("TWITCH_CLIENT_SECRET")
 # CHANNEL_NAME = os.environ.get("TWITCH_CHANNEL_NAME")
 # CHANNEL_NAME = "sodapoppin"
-CHANNEL_NAME = "zackrawrr" 
+CHANNEL_NAME = "zackrawrr"
 
 print(f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}")
 
@@ -52,28 +55,29 @@ clients = set()
 
 chat_log = []
 
+
 def remove_stopwords(sentence):
-    """ Remove stop words from a sentence """
+    """Remove stop words from a sentence"""
     doc = nlp(sentence)
     filtered_sentence = " ".join([token.text for token in doc if not token.is_stop])
     return filtered_sentence
 
+
 def preprocess_chat_message(sentence):
     sentence = sentence.lower()
     sentence = remove_stopwords(sentence)
-    sentence = re.sub('[^a-zA-z0-9\s]', '', sentence)
-    sentence = re.sub(r'\b(?!69\b|420\b)\d+\b', '', sentence)
-    sentence = re.sub(r'\b\w{1,3}\b', '', sentence)
-    sentence = re.sub(' +', ' ', sentence).strip()
+    sentence = re.sub("[^a-zA-z0-9\s]", "", sentence)
+    sentence = re.sub(r"\b(?!69\b|420\b)\d+\b", "", sentence)
+    sentence = re.sub(r"\b\w{1,3}\b", "", sentence)
+    sentence = re.sub(" +", " ", sentence).strip()
     return sentence
 
-async def predict_toxicity(chat_message, model_path="model.vw"):
+
+async def predict_toxicity(preprocessed_chat_message, model_path="model.vw"):
     """Predict the toxicity of a message using Vowpal Wabbit."""
     # Prepare the message in the format VW expects.
     # NOTE: This assumes you trained VW with messages in some specific format. Adjust as necessary.
-    preprocessed_chat_message = preprocess_chat_message(chat_message)
     vw_formatted_message = f"|text {preprocessed_chat_message}"
-
 
     # Run VW for prediction
     result = subprocess.run(
@@ -94,7 +98,7 @@ async def predict_toxicity(chat_message, model_path="model.vw"):
 
     # Parse the output to get prediction
     prediction = float(result.stdout.decode("utf-8").strip())
-    
+
     print(vw_formatted_message, prediction)
 
     # Convert the prediction to -1 or 1 based on some threshold.
@@ -169,29 +173,9 @@ async def receive_chat_messages():
                     timestamp_formatted = timestamp.strftime("%H:%M:%S")
 
                     username = match_nick.group(1) if match_nick else ""
-                    
-                    # chat_message = match_chat.group(1) if match_chat else ""
-
-                    # formatted_message = (
-                    #     f"[{timestamp_formatted}] <{username}> {chat_message}"
-                    # )
-                    # print(formatted_message)
-
-                    # chat_dict = {
-                    #     "username": username,
-                    #     "chat_message": chat_message,
-                    #     "timestamp": timestamp_isoformatted,
-                    # }
-                    # chat_log.append(chat_dict)
-                    # print(chat_log)
-
-                    # await forward_to_clients(formatted_message)
-                    
                     chat_message = match_chat.group(1) if match_chat else ""
-
-                    # Predict the toxicity of the chat message
-
-                    toxicity = await predict_toxicity(chat_message)
+                    preprocessed_chat_message = preprocess_chat_message(chat_message)
+                    toxicity = await predict_toxicity(preprocessed_chat_message) # => 1 not toxic | -1 toxic
 
                     formatted_message = (
                         f"[{timestamp_formatted}] <{username}> {chat_message}"
@@ -201,17 +185,16 @@ async def receive_chat_messages():
                     chat_dict = {
                         "username": username,
                         "chat_message": chat_message,
+                        "preprocessed_chat_message": preprocessed_chat_message,
                         "timestamp": timestamp_isoformatted,
                         "toxicity": toxicity,
                         "channel_name": CHANNEL_NAME,
                     }
                     chat_log.append(chat_dict)
-                    
-                    
+
                     # print(chat_log)
 
                     await forward_to_clients(formatted_message)
-
 
         except Exception as e:
             print(f"WebSocket Error: {e}")

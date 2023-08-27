@@ -225,7 +225,7 @@ def save_chat_log_to_json():
 
 
 def shutdown_server(signum, frame):
-    save_chat_log_to_json()
+    # save_chat_log_to_json()
     os._exit(0)
 
 

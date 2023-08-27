@@ -6,7 +6,13 @@ import websockets
 import signal
 import json
 
-# import spacy
+import pandas as pd
+import websockets
+import re
+import subprocess
+from datetime import datetime
+from dotenv import load_dotenv
+
 import spacy
 
 nlp = spacy.load("en_core_web_sm")
@@ -14,35 +20,14 @@ import en_core_web_sm
 
 nlp = en_core_web_sm.load()
 
-import pandas as pd
-
-import websockets
-import re
-
-# from datetime import datetime
-import subprocess
-
-from datetime import datetime
-
-# from collections import deque
-# from collections import namedtuple
-from dotenv import load_dotenv
-
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 
 # Use a service account.
-cred = credentials.Certificate('credentials.json')
-
+cred = credentials.Certificate("credentials.json")
 app = firebase_admin.initialize_app(cred)
-
 db = firestore.client()
-
-# cred = credentials.Certificate("credentials.json")
-# firebase_admin.initialize_app(cred, {"databaseURL": "https://omfscene24-default-rtdb.firebaseio.com/"})
-# # print(firebase_admin.initialize_app(cred, {"databaseURL": "https://omfscene24-default-rtdb.firebaseio.com/"}))
-# ref = firebase_admin.db.reference("/")
 
 load_dotenv()
 
@@ -54,15 +39,11 @@ CLIENT_SECRET = os.environ.get("TWITCH_CLIENT_SECRET")
 CHANNEL_NAME = "zackrawrr"
 
 print(f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}")
-
-
 print(f"CONNECTING TO: {CHANNEL_NAME}'s CHAT")
 
 # Client Set for Websockets
 clients = set()
-
 chat_log = []
-
 
 def remove_stopwords(sentence):
     """Remove stop words from a sentence"""
@@ -112,7 +93,6 @@ async def get_oauth_token(client_id, client_secret):
     async with aiohttp.ClientSession() as session:
         async with session.post(url) as response:
             data = await response.json()
-            # print(data["access_token"])
             return data["access_token"]
 
 
@@ -145,7 +125,7 @@ async def ws_handler(websocket, path):
 
 async def receive_chat_messages():
     token = await get_oauth_token(CLIENT_ID, CLIENT_SECRET)
- 
+
     websocket_url = f"wss://irc-ws.chat.twitch.tv:443"
     while True:
         try:
@@ -177,10 +157,16 @@ async def receive_chat_messages():
                     username = match_nick.group(1) if match_nick else ""
                     chat_message = match_chat.group(1) if match_chat else ""
                     preprocessed_chat_message = preprocess_chat_message(chat_message)
-                    vw_toxicity_score = await predict_toxicity(preprocessed_chat_message) # => 1 not toxic | -1 toxic
-                    toxicity_boolean = True if vw_toxicity_score < 0.5 else False # this may need adjustment
-                    
-                    formatted_message = (f"[{timestamp_formatted}] <{username}> {chat_message}")
+                    vw_toxicity_score = await predict_toxicity(
+                        preprocessed_chat_message
+                    )  # => 1 not toxic | -1 toxic
+                    toxicity_boolean = (
+                        True if vw_toxicity_score < 0.5 else False
+                    )  # this may need adjustment
+
+                    formatted_message = (
+                        f"[{timestamp_formatted}] <{username}> {chat_message}"
+                    )
 
                     chat_dict = {
                         "username": username,
@@ -192,18 +178,16 @@ async def receive_chat_messages():
                         "channel_name": CHANNEL_NAME,
                     }
                     chat_log.append(chat_dict)
-                    
 
                     # store to firebase
                     now = datetime.now()
                     formatted_date_time = now.strftime("%Y%m%d_%H%M")
-                    # db.collection(CHANNEL_NAME).document("").set(chat_dict)    
-                                    
+                    # db.collection(CHANNEL_NAME).document("").set(chat_dict)
+
                     # Store to firestore
                     doc_ref = db.collection(CHANNEL_NAME).document()
                     doc_ref.set(chat_dict)
-                    
-                    
+
                     print(formatted_message, vw_toxicity_score, toxicity_boolean)
 
                     # send to client ui

@@ -5,11 +5,13 @@ import aiohttp
 import websockets
 import signal
 import json
+# import datetime
 
 
 from datetime import datetime
+
 # from collections import deque
-from collections import namedtuple
+# from collections import namedtuple
 from dotenv import load_dotenv
 
 
@@ -19,16 +21,13 @@ load_dotenv()
 CLIENT_ID = os.environ.get("TWITCH_CLIENT_ID")
 CLIENT_SECRET = os.environ.get("TWITCH_CLIENT_SECRET")
 # CHANNEL_NAME = os.environ.get("TWITCH_CHANNEL_NAME")
-CHANNEL_NAME = "summit1g"
+# CHANNEL_NAME = "sodapoppin"
+CHANNEL_NAME = "zackrawrr"
 
-print(
-    f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}"
-)
+print(f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}")
 
 
-print(
-    f"CONNECTING TO: {CHANNEL_NAME}'s CHAT"
-)
+print(f"CONNECTING TO: {CHANNEL_NAME}'s CHAT")
 
 # Client Set for Websockets
 clients = set()
@@ -84,9 +83,8 @@ async def receive_chat_messages():
                 await websocket.send(f"JOIN #{CHANNEL_NAME}")
                 after_end_of_names = False
                 while True:
-                    
                     # TODO: Check for stream start message.
-                    
+
                     message = await websocket.recv()
                     message = message.strip().replace("\n", "")
                     if not after_end_of_names:
@@ -94,27 +92,32 @@ async def receive_chat_messages():
                         if match:
                             after_end_of_names = True
                         continue
-                    
 
                     # Extracting chat messages for forwarding
                     match_nick = re.search(r"@(\w+)\.tmi\.twitch\.tv", message)
                     match_chat = re.search(r"PRIVMSG #\w+ :(.*)", message)
-                    
+
                     timestamp = datetime.now()
                     timestamp_isoformatted = timestamp.isoformat()
                     timestamp_formatted = timestamp.strftime("%H:%M:%S")
-                    
+
                     username = match_nick.group(1) if match_nick else ""
                     chat_message = match_chat.group(1) if match_chat else ""
 
-                    formatted_message = f"[{timestamp_formatted}] <{username}> {chat_message}"
+                    formatted_message = (
+                        f"[{timestamp_formatted}] <{username}> {chat_message}"
+                    )
                     print(formatted_message)
 
-                    chat_dict = {"username": username, "chat_message": chat_message, "timestamp": timestamp_isoformatted}
+                    chat_dict = {
+                        "username": username,
+                        "chat_message": chat_message,
+                        "timestamp": timestamp_isoformatted,
+                    }
                     chat_log.append(chat_dict)
 
                     await forward_to_clients(formatted_message)
-                    
+
         except Exception as e:
             print(f"WebSocket Error: {e}")
             print("Reconnecting...")
@@ -122,7 +125,11 @@ async def receive_chat_messages():
 
 
 def save_chat_log_to_json():
-    with open('chat_log.json', 'w') as file:
+    now = datetime.now()
+    formatted_date_time = now.strftime("%Y%m%d_%H%M")
+    chat_log_filename = f"chatlog_{formatted_date_time}.json"
+
+    with open(chat_log_filename, "w") as file:
         json.dump(chat_log, file)
 
 
@@ -130,13 +137,13 @@ def shutdown_server(signum, frame):
     save_chat_log_to_json()
     os._exit(0)
 
-    
+
 if __name__ == "__main__":
     # For local websocket server
     loop = asyncio.get_event_loop()
     loop.create_task(receive_chat_messages())  # Twitch Chat Receiver
     # server = websockets.serve(ws_handler, "0.0.0.0", 8080) # Start WebSocket Server
-    server = websockets.serve(ws_handler, "127.0.0.1", 8080)  
+    server = websockets.serve(ws_handler, "127.0.0.1", 8080)
     # server = websockets.serve(ws_handler, "localhost", 5678)
 
     # register signal handler for graceful shutdown
@@ -146,4 +153,3 @@ if __name__ == "__main__":
     print("Websocket server address: ", server)
     loop.run_until_complete(server)
     loop.run_forever()
-

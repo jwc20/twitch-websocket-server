@@ -5,8 +5,6 @@ import aiohttp
 import websockets
 import signal
 import json
-# import datetime
-
 
 from datetime import datetime
 
@@ -14,6 +12,13 @@ from datetime import datetime
 # from collections import namedtuple
 from dotenv import load_dotenv
 
+# import firebase_admin
+# from firebase_admin import credentials
+
+# cred = credentials.Certificate("credentials.json")
+# firebase_admin.initialize_app(cred, {"databaseURL": "https://omfscene24-default-rtdb.firebaseio.com/"})
+# # print(firebase_admin.initialize_app(cred, {"databaseURL": "https://omfscene24-default-rtdb.firebaseio.com/"}))
+# ref = firebase_admin.db.reference("/")
 
 load_dotenv()
 
@@ -115,6 +120,7 @@ async def receive_chat_messages():
                         "timestamp": timestamp_isoformatted,
                     }
                     chat_log.append(chat_dict)
+                    print(chat_log)
 
                     await forward_to_clients(formatted_message)
 
@@ -147,8 +153,8 @@ if __name__ == "__main__":
     # server = websockets.serve(ws_handler, "localhost", 5678)
 
     # register signal handler for graceful shutdown
-    signal.signal(signal.SIGINT, shutdown_server)
-    signal.signal(signal.SIGTERM, shutdown_server)
+    # signal.signal(signal.SIGINT, shutdown_server)
+    # signal.signal(signal.SIGTERM, shutdown_server)
 
     print("Websocket server address: ", server)
     loop.run_until_complete(server)

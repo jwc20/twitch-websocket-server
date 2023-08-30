@@ -183,33 +183,18 @@ async def receive_chat_messages():
 
                     chat_log.append(chat_dict)
     
-                    # hour_document_ref = db.collection('chats').document(CHANNEL_NAME).collection(year).document(month).collection(day).document(hour)
+                    hour_document_ref = db.collection('chats').document(CHANNEL_NAME).collection(year).document(month).collection(day).document(hour)
 
-                    # if hour_document_ref.get().exists:
-                    #     hour_document_ref.update({
-                    #         "chats": firestore.ArrayUnion([chat_dict])
-                    #     })
-                    # else:
-                    #     hour_document_ref.set({
-                    #         "chats": firestore.ArrayUnion([chat_dict])
-                    #     })
-                    
-                    # Refactored firestore storage logic
-                    hour_document_ref = db.collection('comments').document(CHANNEL_NAME).collection(year).document(month).collection(day).document(hour)
-                    hour_document = await hour_document_ref.get()
-
-                    if hour_document.exists:
-                        # If the hour document already exists, append the chat message to the existing array
+                    if hour_document_ref.get().exists:
                         hour_document_ref.update({
-                            'chat_messages': firestore.ArrayUnion([chat_dict])
+                            "chats": firestore.ArrayUnion([chat_dict])
                         })
                     else:
-                        # If the hour document doesn't exist, create it with the current chat message
                         hour_document_ref.set({
-                            'chat_messages': [chat_dict]
+                            "chats": firestore.ArrayUnion([chat_dict])
                         })
-
-
+                    
+                   
 
                     # Store to firestore
                     # doc_ref = db.collection(CHANNEL_NAME).document()

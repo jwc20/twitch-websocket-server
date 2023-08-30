@@ -35,8 +35,8 @@ load_dotenv()
 CLIENT_ID = os.environ.get("TWITCH_CLIENT_ID")
 CLIENT_SECRET = os.environ.get("TWITCH_CLIENT_SECRET")
 # CHANNEL_NAME = os.environ.get("TWITCH_CHANNEL_NAME")
-# CHANNEL_NAME = "sodapoppin"
-CHANNEL_NAME = "zackrawrr"
+CHANNEL_NAME = "nmplol"
+# CHANNEL_NAME = "zackrawrr"
 
 print(f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}")
 print(f"CONNECTING TO: {CHANNEL_NAME}'s CHAT")
@@ -168,6 +168,9 @@ async def receive_chat_messages():
                         f"[{timestamp_formatted}] <{username}> {chat_message}"
                     )
 
+                    # timestamp = datetime.now()
+                    year, month, day, hour = timestamp.strftime('%Y'), timestamp.strftime('%m'), timestamp.strftime('%d'), timestamp.strftime('%H')
+
                     chat_dict = {
                         "username": username,
                         "chat_message": chat_message,
@@ -177,16 +180,40 @@ async def receive_chat_messages():
                         "is_toxic": toxicity_boolean,
                         "channel_name": CHANNEL_NAME,
                     }
-                    chat_log.append(chat_dict)
 
-                    # store to firebase
-                    now = datetime.now()
-                    formatted_date_time = now.strftime("%Y%m%d_%H%M")
-                    # db.collection(CHANNEL_NAME).document("").set(chat_dict)
+                    chat_log.append(chat_dict)
+    
+                    # hour_document_ref = db.collection('chats').document(CHANNEL_NAME).collection(year).document(month).collection(day).document(hour)
+
+                    # if hour_document_ref.get().exists:
+                    #     hour_document_ref.update({
+                    #         "chats": firestore.ArrayUnion([chat_dict])
+                    #     })
+                    # else:
+                    #     hour_document_ref.set({
+                    #         "chats": firestore.ArrayUnion([chat_dict])
+                    #     })
+                    
+                    # Refactored firestore storage logic
+                    hour_document_ref = db.collection('comments').document(CHANNEL_NAME).collection(year).document(month).collection(day).document(hour)
+                    hour_document = await hour_document_ref.get()
+
+                    if hour_document.exists:
+                        # If the hour document already exists, append the chat message to the existing array
+                        hour_document_ref.update({
+                            'chat_messages': firestore.ArrayUnion([chat_dict])
+                        })
+                    else:
+                        # If the hour document doesn't exist, create it with the current chat message
+                        hour_document_ref.set({
+                            'chat_messages': [chat_dict]
+                        })
+
+
 
                     # Store to firestore
-                    doc_ref = db.collection(CHANNEL_NAME).document()
-                    doc_ref.set(chat_dict)
+                    # doc_ref = db.collection(CHANNEL_NAME).document()
+                    # doc_ref.set(chat_dict)
 
                     print(formatted_message, vw_toxicity_score, toxicity_boolean)
 

@@ -1,5 +1,6 @@
 .vscode
 
+api_key_credentials.json
 credentials.json
 firebase-adminsdk.json
 

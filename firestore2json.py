@@ -17,5 +17,9 @@ data = [doc.to_dict() for doc in docs]
 
 # Export data to JSON file
 with open(f'output.json', 'w') as outfile:
+    # get length of list
+    length = len(data)
+    print(length)
     json.dump(data, outfile, indent=4)
+
 

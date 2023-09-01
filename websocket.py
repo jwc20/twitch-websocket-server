@@ -24,18 +24,28 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 
+
+import secret_manager
+
 # Use a service account.
 cred = credentials.Certificate("credentials.json")
 app = firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-load_dotenv()
+# load_dotenv()
+
+project_id = 'calm-armor-396402'
+twitch_client_secret = 'TWITCH_CLIENT_SECRET'
+twitch_client_id = 'TWITCH_CLIENT_ID'
+# get secret key from secret_manager.py
+CLIENT_ID, CLIENT_SECRET = secret_manager.twitch_get_secret(project_id, twitch_client_id, twitch_client_secret)
+
 
 # Twitch Configurations
-CLIENT_ID = os.environ.get("TWITCH_CLIENT_ID")
-CLIENT_SECRET = os.environ.get("TWITCH_CLIENT_SECRET")
+# CLIENT_ID = os.environ.get("TWITCH_CLIENT_ID")
+# CLIENT_SECRET = os.environ.get("TWITCH_CLIENT_SECRET")
 # CHANNEL_NAME = os.environ.get("TWITCH_CHANNEL_NAME")
-CHANNEL_NAME = "nmplol"
+CHANNEL_NAME = "sodapoppin"
 # CHANNEL_NAME = "zackrawrr"
 
 print(f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}")

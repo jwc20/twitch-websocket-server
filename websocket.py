@@ -13,6 +13,9 @@ import subprocess
 from datetime import datetime
 from dotenv import load_dotenv
 
+import sys
+import time
+import threading
 import spacy
 
 nlp = spacy.load("en_core_web_sm")
@@ -24,6 +27,7 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 
+import pytz
 
 import secret_manager
 
@@ -48,8 +52,9 @@ CLIENT_ID, CLIENT_SECRET = secret_manager.twitch_get_secret(project_id, twitch_c
 CHANNEL_NAME = "sodapoppin"
 # CHANNEL_NAME = "zackrawrr"
 
-print(f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}")
-print(f"CONNECTING TO: {CHANNEL_NAME}'s CHAT")
+# print(f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}")
+print(f"CONNECTING TO: {CHANNEL_NAME}'s CHAT") 
+print("\n")
 
 # Client Set for Websockets
 clients = set()
@@ -141,6 +146,7 @@ async def receive_chat_messages():
         try:
             async with websockets.connect(websocket_url) as websocket:
                 print(websocket_url)
+                print("\n")
                 await websocket.send(f"PASS oauth:{token}")
                 await websocket.send(f"NICK justinfan123")  # for read-only
                 await websocket.send(f"JOIN #{CHANNEL_NAME}")
@@ -160,10 +166,28 @@ async def receive_chat_messages():
                     match_nick = re.search(r"@(\w+)\.tmi\.twitch\.tv", message)
                     match_chat = re.search(r"PRIVMSG #\w+ :(.*)", message)
 
+                    # set timestamp1 to korean time zone
+                    
+                    
+                    
                     timestamp = datetime.now()
                     timestamp_isoformatted = timestamp.isoformat()
                     timestamp_formatted = timestamp.strftime("%H:%M:%S")
+                    
+                    utcmoment_naive = datetime.utcnow()
+                    utcmoment = utcmoment_naive.replace(tzinfo=pytz.utc)
 
+                    # localFormat = "%Y-%m-%d %H:%M:%S"   
+                    # create an array with the korean timezone
+                    koreaTime = pytz.timezone('Asia/Seoul')
+                    # create a datetime object in korean timezone   
+                    koreaTimeNow = datetime.now(koreaTime)
+                    # koreaTimeNow iso format
+                    # koreaTimeNow_isoformatted = koreaTimeNow.isoformat()
+                    # format the datetime object into a string
+                    # koreaTimeNow_formatted  = koreaTimeNow_isoformatted.strftime(localFormat)
+                    
+                    
                     username = match_nick.group(1) if match_nick else ""
                     chat_message = match_chat.group(1) if match_chat else ""
                     preprocessed_chat_message = preprocess_chat_message(chat_message)
@@ -178,8 +202,12 @@ async def receive_chat_messages():
                         f"[{timestamp_formatted}] <{username}> {chat_message}"
                     )
 
-                    # timestamp = datetime.now()
-                    year, month, day, hour = timestamp.strftime('%Y'), timestamp.strftime('%m'), timestamp.strftime('%d'), timestamp.strftime('%H')
+
+                    # DO NOT ERASE THIS
+                    # year, month, day, hour = timestamp.strftime('%Y'), timestamp.strftime('%m'), timestamp.strftime('%d'), timestamp.strftime('%H')
+                    
+                    # Need this for firestore timestamp
+                    year, month, day, hour = koreaTimeNow.strftime('%Y'), koreaTimeNow.strftime('%m'), koreaTimeNow.strftime('%d'), koreaTimeNow.strftime('%H')
 
                     chat_dict = {
                         "username": username,
@@ -204,13 +232,7 @@ async def receive_chat_messages():
                             "chats": firestore.ArrayUnion([chat_dict])
                         })
                     
-                   
-
-                    # Store to firestore
-                    # doc_ref = db.collection(CHANNEL_NAME).document()
-                    # doc_ref.set(chat_dict)
-
-                    print(formatted_message, vw_toxicity_score, toxicity_boolean)
+                    # print(formatted_message, vw_toxicity_score, toxicity_boolean)
 
                     # send to client ui
                     await forward_to_clients(formatted_message)
@@ -234,14 +256,52 @@ def shutdown_server(signum, frame):
     # save_chat_log_to_json()
     os._exit(0)
 
+# def spinning_cursor():
+#     while True:
+#         for cursor in '|/-\\':
+#             yield cursor
+
+# if __name__ == "__main__":
+#     # For local websocket server
+#     loop = asyncio.get_event_loop()
+#     loop.create_task(receive_chat_messages())  # Twitch Chat Receiver
+#     # server = websockets.serve(ws_handler, "0.0.0.0", 8080) # Start WebSocket Server
+#     server = websockets.serve(ws_handler, "127.0.0.1", 8080)
+#     # server = websockets.serve(ws_handler, "localhost", 5678)
+    
+
+#     # register signal handler for graceful shutdown
+#     signal.signal(signal.SIGINT, shutdown_server)
+#     signal.signal(signal.SIGTERM, shutdown_server)
+
+#     print("Websocket server address: ", server)
+#     loop.run_until_complete(server)
+#     loop.run_forever()
+
+
+def spinning_cursor():
+    while True:
+        for cursor in '|/-\\':
+            yield cursor
+
+def spinner_function():
+    spinner = spinning_cursor()
+    while True:
+        sys.stdout.write(next(spinner))
+        sys.stdout.flush()
+        time.sleep(0.1)
+        sys.stdout.write('\b')
 
 if __name__ == "__main__":
+    # Start the spinner in a separate thread
+    spinner_thread = threading.Thread(target=spinner_function)
+    spinner_thread.daemon = True  # Daemon threads will be automatically killed once the main program exits.
+    spinner_thread.start()
+
     # For local websocket server
     loop = asyncio.get_event_loop()
     loop.create_task(receive_chat_messages())  # Twitch Chat Receiver
-    # server = websockets.serve(ws_handler, "0.0.0.0", 8080) # Start WebSocket Server
     server = websockets.serve(ws_handler, "127.0.0.1", 8080)
-    # server = websockets.serve(ws_handler, "localhost", 5678)
 
     # register signal handler for graceful shutdown
     signal.signal(signal.SIGINT, shutdown_server)

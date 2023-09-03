@@ -42,12 +42,12 @@ CLIENT_ID, CLIENT_SECRET = secret_manager.twitch_get_secret(
     project_id, twitch_client_id, twitch_client_secret
 )
 
-print(f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}")
+# print(f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}")
 
 
 # Twitch Configurations
-# CHANNEL_NAME = "sodapoppin"
-CHANNEL_NAME = "zackrawrr"
+CHANNEL_NAME = "sodapoppin"
+# CHANNEL_NAME = "zackrawrr"
 
 # print(f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}")
 print(f"CONNECTING TO: {CHANNEL_NAME}'s CHAT")
@@ -112,13 +112,13 @@ async def get_oauth_token(client_id, client_secret):
 
 async def receive_chat_messages():
     token = await get_oauth_token(CLIENT_ID, CLIENT_SECRET)
-    print("Authenicated with Twitch")
+    print("Authenticated with Twitch")
 
     websocket_url = f"wss://irc-ws.chat.twitch.tv:443"
     while True:
         try:
             async with websockets.connect(websocket_url) as websocket:
-                print(websocket_url)
+                # print(websocket_url)
                 
                 # TODO change to get access token
                 await websocket.send(f"PASS oauth:{token}")
@@ -159,7 +159,7 @@ async def receive_chat_messages():
                     # format the datetime object into a string
                     # koreaTimeNow_formatted  = koreaTimeNow_isoformatted.strftime(localFormat)
                     
-                    remove_list = ['', 'Fossabot', 'Nightbot', 'StreamElements', 'Streamlabs', 'OkayegBOT']
+                    remove_list = ['Fossabot', 'Nightbot', 'StreamElements', 'Streamlabs', 'OkayegBOT']
                     username = match_nick.group(1) if match_nick else ""
 
                     if any(x in username for x in remove_list):
@@ -216,7 +216,7 @@ async def receive_chat_messages():
                     )
                     
                     print(formatted_message)
-                    print("        ",preprocessed_chat_message, toxicity_boolean)
+                    # print("        ",preprocessed_chat_message, toxicity_boolean)
 
 
                     if hour_document_ref.get().exists:

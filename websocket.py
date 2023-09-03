@@ -11,8 +11,6 @@ import websockets
 import re
 import subprocess
 from datetime import datetime
-from dotenv import load_dotenv
-
 
 import spacy
 
@@ -30,12 +28,11 @@ import pytz
 import secret_manager
 
 
-# Use a service account.
-cred = credentials.Certificate("credentials.json")
+# Use a service account. firebase
+cred = credentials.Certificate("omfscene24-firebase-adminsdk-j15tw-d6d49b9999.json")
 app = firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-# load_dotenv()
 
 project_id = "calm-armor-396402"
 twitch_client_secret = "TWITCH_CLIENT_SECRET"
@@ -67,9 +64,8 @@ def remove_stopwords(sentence):
     return filtered_sentence
 
 
-    # TODO: modify based on the result of the model
+# TODO: modify based on the result of the model
 def preprocess_chat_message(sentence):
-    # sentence = re.sub(r'@.*\b', '', sentence)
     sentence = re.sub(r'@\w+', '', sentence)
     sentence = sentence.lower()
     sentence = remove_stopwords(sentence)
@@ -112,33 +108,6 @@ async def get_oauth_token(client_id, client_secret):
         async with session.post(url) as response:
             data = await response.json()
             return data["access_token"]
-
-
-async def forward_to_clients(message):
-    for client in clients:
-        try:
-            await client.send(message)
-        except:
-            continue
-
-
-async def register_client(websocket):
-    clients.add(websocket)
-
-
-async def unregister_client(websocket):
-    clients.remove(websocket)
-
-
-async def ws_handler(websocket, path):
-    await register_client(websocket)
-    try:
-        async for message in websocket:
-            await forward_to_clients(message)
-    except:
-        pass
-    finally:
-        await unregister_client(websocket)
 
 
 async def receive_chat_messages():
@@ -242,25 +211,24 @@ async def receive_chat_messages():
                         .document(hour)
                     )
 
-                    # if hour_document_ref.get().exists:
-                    #     hour_document_ref.update(
-                    #         {"chats": firestore.ArrayUnion([chat_dict])}
-                    #     )
-                    # else:
-                    #     hour_document_ref.set(
-                    #         {"chats": firestore.ArrayUnion([chat_dict])}
-                    #     )
-                    
                     formatted_message = (
                         f"[{timestamp_formatted}] <{username}> {chat_message}"
                     )
                     
                     print(formatted_message)
                     print("        ",preprocessed_chat_message, toxicity_boolean)
-                    # pp(chat_dict)
 
-                    # send to client ui
-                    await forward_to_clients(formatted_message)
+
+                    if hour_document_ref.get().exists:
+                        hour_document_ref.update(
+                            {"chats": firestore.ArrayUnion([chat_dict])}
+                        )
+                    else:
+                        hour_document_ref.set(
+                            {"chats": firestore.ArrayUnion([chat_dict])}
+                        )
+                    
+
 
         except Exception as e:
             print(f"WebSocket Error: {e}")
@@ -312,12 +280,9 @@ if __name__ == "__main__":
     # For local websocket server
     loop = asyncio.get_event_loop()
     loop.create_task(receive_chat_messages())  # Twitch Chat Receiver
-    server = websockets.serve(ws_handler, "127.0.0.1", 8080)
 
     # register signal handler for graceful shutdown
     signal.signal(signal.SIGINT, shutdown_server)
     signal.signal(signal.SIGTERM, shutdown_server)
 
-    print("Websocket server address: ", server)
-    loop.run_until_complete(server)
     loop.run_forever()

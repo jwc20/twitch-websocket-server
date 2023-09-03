@@ -1,25 +1,21 @@
 import json
 from google.cloud import firestore
+import datetime
 
-# Initialize Firestore client with credentials
 db = firestore.Client.from_service_account_json("credentials.json")
-
-# Choose your Firestore collection
-# collection_name = 'chat'
-# collection_ref = db.collection(collection_name)
-collection_ref = db.collection('chats').document('sodapoppin').collection('2023').document('08').collection('31')
-
-# Fetch documents from the collection
+collection_ref = db.collection('chats').document('sodapoppin').collection('2023').document('09').collection('02')
 docs = collection_ref.stream()
-
-# Convert documents into a list of dictionaries
 data = [doc.to_dict() for doc in docs]
 
-# Export data to JSON file
-with open(f'output.json', 'w') as outfile:
-    # get length of list
+filename = 'chat_' + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M") + '.json'
+with open(filename, 'w') as outfile:
     length = len(data)
-    print(length)
-    json.dump(data, outfile, indent=4)
+    print("Number of hours recorded: ",length)
+    json.dump(data, outfile)
+    
+    
+
+
+
 
 

@@ -13,9 +13,7 @@ import subprocess
 from datetime import datetime
 from dotenv import load_dotenv
 
-import sys
-import time
-import threading
+
 import spacy
 
 nlp = spacy.load("en_core_web_sm")
@@ -31,6 +29,7 @@ import pytz
 
 import secret_manager
 
+
 # Use a service account.
 cred = credentials.Certificate("credentials.json")
 app = firebase_admin.initialize_app(cred)
@@ -38,27 +37,28 @@ db = firestore.client()
 
 # load_dotenv()
 
-project_id = 'calm-armor-396402'
-twitch_client_secret = 'TWITCH_CLIENT_SECRET'
-twitch_client_id = 'TWITCH_CLIENT_ID'
+project_id = "calm-armor-396402"
+twitch_client_secret = "TWITCH_CLIENT_SECRET"
+twitch_client_id = "TWITCH_CLIENT_ID"
 # get secret key from secret_manager.py
-CLIENT_ID, CLIENT_SECRET = secret_manager.twitch_get_secret(project_id, twitch_client_id, twitch_client_secret)
+CLIENT_ID, CLIENT_SECRET = secret_manager.twitch_get_secret(
+    project_id, twitch_client_id, twitch_client_secret
+)
+
+print(f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}")
 
 
 # Twitch Configurations
-# CLIENT_ID = os.environ.get("TWITCH_CLIENT_ID")
-# CLIENT_SECRET = os.environ.get("TWITCH_CLIENT_SECRET")
-# CHANNEL_NAME = os.environ.get("TWITCH_CHANNEL_NAME")
-CHANNEL_NAME = "sodapoppin"
-# CHANNEL_NAME = "zackrawrr"
+# CHANNEL_NAME = "sodapoppin"
+CHANNEL_NAME = "zackrawrr"
 
 # print(f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}")
-print(f"CONNECTING TO: {CHANNEL_NAME}'s CHAT") 
-print("\n")
+print(f"CONNECTING TO: {CHANNEL_NAME}'s CHAT")
 
 # Client Set for Websockets
 clients = set()
 chat_log = []
+
 
 def remove_stopwords(sentence):
     """Remove stop words from a sentence"""
@@ -67,7 +67,10 @@ def remove_stopwords(sentence):
     return filtered_sentence
 
 
+    # TODO: modify based on the result of the model
 def preprocess_chat_message(sentence):
+    # sentence = re.sub(r'@.*\b', '', sentence)
+    sentence = re.sub(r'@\w+', '', sentence)
     sentence = sentence.lower()
     sentence = remove_stopwords(sentence)
     sentence = re.sub("[^a-zA-z0-9\s]", "", sentence)
@@ -140,13 +143,15 @@ async def ws_handler(websocket, path):
 
 async def receive_chat_messages():
     token = await get_oauth_token(CLIENT_ID, CLIENT_SECRET)
+    print("Authenicated with Twitch")
 
     websocket_url = f"wss://irc-ws.chat.twitch.tv:443"
     while True:
         try:
             async with websockets.connect(websocket_url) as websocket:
                 print(websocket_url)
-                print("\n")
+                
+                # TODO change to get access token
                 await websocket.send(f"PASS oauth:{token}")
                 await websocket.send(f"NICK justinfan123")  # for read-only
                 await websocket.send(f"JOIN #{CHANNEL_NAME}")
@@ -167,28 +172,30 @@ async def receive_chat_messages():
                     match_chat = re.search(r"PRIVMSG #\w+ :(.*)", message)
 
                     # set timestamp1 to korean time zone
-                    
-                    
-                    
+
                     timestamp = datetime.now()
                     timestamp_isoformatted = timestamp.isoformat()
                     timestamp_formatted = timestamp.strftime("%H:%M:%S")
-                    
+
                     utcmoment_naive = datetime.utcnow()
                     utcmoment = utcmoment_naive.replace(tzinfo=pytz.utc)
 
-                    # localFormat = "%Y-%m-%d %H:%M:%S"   
+                    # localFormat = "%Y-%m-%d %H:%M:%S"
                     # create an array with the korean timezone
-                    koreaTime = pytz.timezone('Asia/Seoul')
-                    # create a datetime object in korean timezone   
+                    koreaTime = pytz.timezone("Asia/Seoul")
+                    # create a datetime object in korean timezone
                     koreaTimeNow = datetime.now(koreaTime)
                     # koreaTimeNow iso format
                     # koreaTimeNow_isoformatted = koreaTimeNow.isoformat()
                     # format the datetime object into a string
                     # koreaTimeNow_formatted  = koreaTimeNow_isoformatted.strftime(localFormat)
                     
-                    
+                    remove_list = ['Fossabot', 'Nightbot', 'StreamElements', 'Streamlabs', 'OkayegBOT']
                     username = match_nick.group(1) if match_nick else ""
+
+                    if any(x in username for x in remove_list):
+                        continue                                        
+
                     chat_message = match_chat.group(1) if match_chat else ""
                     preprocessed_chat_message = preprocess_chat_message(chat_message)
                     vw_toxicity_score = await predict_toxicity(
@@ -198,16 +205,18 @@ async def receive_chat_messages():
                         True if vw_toxicity_score < 0.5 else False
                     )  # this may need adjustment
 
-                    formatted_message = (
-                        f"[{timestamp_formatted}] <{username}> {chat_message}"
-                    )
 
 
-                    # DO NOT ERASE THIS
+                    # DO NOT ERASE THIS:
                     # year, month, day, hour = timestamp.strftime('%Y'), timestamp.strftime('%m'), timestamp.strftime('%d'), timestamp.strftime('%H')
-                    
+
                     # Need this for firestore timestamp
-                    year, month, day, hour = koreaTimeNow.strftime('%Y'), koreaTimeNow.strftime('%m'), koreaTimeNow.strftime('%d'), koreaTimeNow.strftime('%H')
+                    year, month, day, hour = (
+                        koreaTimeNow.strftime("%Y"),
+                        koreaTimeNow.strftime("%m"),
+                        koreaTimeNow.strftime("%d"),
+                        koreaTimeNow.strftime("%H"),
+                    )
 
                     chat_dict = {
                         "username": username,
@@ -217,22 +226,38 @@ async def receive_chat_messages():
                         "vw_toxicity_score": vw_toxicity_score,
                         "is_toxic": toxicity_boolean,
                         "channel_name": CHANNEL_NAME,
+                        "last_labeler": "",
+                        "last_label_timestamp": "",
+                        "labeler_list": [],
                     }
 
                     chat_log.append(chat_dict)
-    
-                    hour_document_ref = db.collection('chats').document(CHANNEL_NAME).collection(year).document(month).collection(day).document(hour)
 
-                    if hour_document_ref.get().exists:
-                        hour_document_ref.update({
-                            "chats": firestore.ArrayUnion([chat_dict])
-                        })
-                    else:
-                        hour_document_ref.set({
-                            "chats": firestore.ArrayUnion([chat_dict])
-                        })
+                    hour_document_ref = (
+                        db.collection("chats")
+                        .document(CHANNEL_NAME)
+                        .collection(year)
+                        .document(month)
+                        .collection(day)
+                        .document(hour)
+                    )
+
+                    # if hour_document_ref.get().exists:
+                    #     hour_document_ref.update(
+                    #         {"chats": firestore.ArrayUnion([chat_dict])}
+                    #     )
+                    # else:
+                    #     hour_document_ref.set(
+                    #         {"chats": firestore.ArrayUnion([chat_dict])}
+                    #     )
                     
-                    # print(formatted_message, vw_toxicity_score, toxicity_boolean)
+                    formatted_message = (
+                        f"[{timestamp_formatted}] <{username}> {chat_message}"
+                    )
+                    
+                    print(formatted_message)
+                    print("        ",preprocessed_chat_message, toxicity_boolean)
+                    # pp(chat_dict)
 
                     # send to client ui
                     await forward_to_clients(formatted_message)
@@ -246,15 +271,16 @@ async def receive_chat_messages():
 def save_chat_log_to_json():
     now = datetime.now()
     formatted_date_time = now.strftime("%Y%m%d_%H%M")
-    chat_log_filename = f"chatlog_{formatted_date_time}.json"
+    chat_log_filename = f"{CHANNEL_NAME}_chatlog_{formatted_date_time}.json"
 
     with open(chat_log_filename, "w") as file:
         json.dump(chat_log, file)
 
 
 def shutdown_server(signum, frame):
-    # save_chat_log_to_json()
+    save_chat_log_to_json()
     os._exit(0)
+
 
 # def spinning_cursor():
 #     while True:
@@ -268,7 +294,7 @@ def shutdown_server(signum, frame):
 #     # server = websockets.serve(ws_handler, "0.0.0.0", 8080) # Start WebSocket Server
 #     server = websockets.serve(ws_handler, "127.0.0.1", 8080)
 #     # server = websockets.serve(ws_handler, "localhost", 5678)
-    
+
 
 #     # register signal handler for graceful shutdown
 #     signal.signal(signal.SIGINT, shutdown_server)
@@ -279,25 +305,10 @@ def shutdown_server(signum, frame):
 #     loop.run_forever()
 
 
-def spinning_cursor():
-    while True:
-        for cursor in '|/-\\':
-            yield cursor
 
-def spinner_function():
-    spinner = spinning_cursor()
-    while True:
-        sys.stdout.write(next(spinner))
-        sys.stdout.flush()
-        time.sleep(0.1)
-        sys.stdout.write('\b')
+
 
 if __name__ == "__main__":
-    # Start the spinner in a separate thread
-    spinner_thread = threading.Thread(target=spinner_function)
-    spinner_thread.daemon = True  # Daemon threads will be automatically killed once the main program exits.
-    spinner_thread.start()
-
     # For local websocket server
     loop = asyncio.get_event_loop()
     loop.create_task(receive_chat_messages())  # Twitch Chat Receiver

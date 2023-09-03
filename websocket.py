@@ -159,7 +159,7 @@ async def receive_chat_messages():
                     # format the datetime object into a string
                     # koreaTimeNow_formatted  = koreaTimeNow_isoformatted.strftime(localFormat)
                     
-                    remove_list = ['Fossabot', 'Nightbot', 'StreamElements', 'Streamlabs', 'OkayegBOT']
+                    remove_list = ['', 'Fossabot', 'Nightbot', 'StreamElements', 'Streamlabs', 'OkayegBOT']
                     username = match_nick.group(1) if match_nick else ""
 
                     if any(x in username for x in remove_list):

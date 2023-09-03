@@ -29,7 +29,7 @@ import secret_manager
 
 
 # Use a service account. firebase
-cred = credentials.Certificate("omfscene24-firebase-adminsdk-j15tw-d6d49b9999.json")
+cred = credentials.Certificate("credentials.json")
 app = firebase_admin.initialize_app(cred)
 db = firestore.client()
 

@@ -3,7 +3,7 @@ from google.cloud import firestore
 from datetime import datetime
 
 channel_name = "sodapoppin"
-db = firestore.Client.from_service_account_json("omfscene24-firebase-adminsdk-j15tw-d6d49b9999.json")
+db = firestore.Client.from_service_account_json("credentials.json")
 collection_ref = (
     db.collection("chats")
     .document(channel_name)

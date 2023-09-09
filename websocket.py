@@ -46,8 +46,9 @@ CLIENT_ID, CLIENT_SECRET = secret_manager.twitch_get_secret(
 
 
 # Twitch Configurations
-CHANNEL_NAME = "sodapoppin"
+# CHANNEL_NAME = "sodapoppin"
 # CHANNEL_NAME = "zackrawrr"
+CHANNEL_NAME = "avoidingthepuddle"
 
 # print(f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}")
 print(f"CONNECTING TO: {CHANNEL_NAME}'s CHAT")
@@ -218,6 +219,9 @@ async def receive_chat_messages():
                     print(formatted_message)
                     # print("        ",preprocessed_chat_message, toxicity_boolean)
 
+                    # set write and update rate to 1.1 second to avoid firestore write limit
+                    await asyncio.sleep(1.1)
+                    
 
                     if hour_document_ref.get().exists:
                         hour_document_ref.update(

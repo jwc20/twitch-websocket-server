@@ -5,6 +5,9 @@ import aiohttp
 import websockets
 import signal
 import json
+from google.cloud import firestore
+import hashlib
+
 
 import pandas as pd
 import websockets
@@ -125,8 +128,10 @@ async def forward_to_clients(message):
 async def register_client(websocket):
     clients.add(websocket)
 
+
 async def unregister_client(websocket):
     clients.remove(websocket)
+
 
 async def ws_handler(websocket, path):
     await register_client(websocket)
@@ -137,6 +142,7 @@ async def ws_handler(websocket, path):
         pass
     finally:
         await unregister_client(websocket)
+
 
 async def receive_chat_messages():
     token = await get_oauth_token(CLIENT_ID, CLIENT_SECRET)
@@ -219,7 +225,22 @@ async def receive_chat_messages():
                         koreaTimeNow.strftime("%H"),
                     )
 
+                    hour_document_ref = (
+                        db.collection("chats")
+                        .document(CHANNEL_NAME)
+                        .collection(year)
+                        .document(month)
+                        .collection(day)
+                        .document(hour)
+                    )
+
+                    # chat_id = hour_document_ref.id
+                    hash = hashlib.sha256(message.encode('utf-8')).hexdigest()
+                    # convert hash to string
+                    # gfg.update(message.encode('utf-8'))
+
                     chat_dict = {
+                        "chat_id": hash,
                         "username": username,
                         "chat_message": chat_message,
                         "preprocessed_chat_message": preprocessed_chat_message,
@@ -232,16 +253,9 @@ async def receive_chat_messages():
                         "labeler_list": [],
                     }
 
-                    chat_log.append(chat_dict)
+                    # chat_dict.chat_id = db.collection("chats").document().id
 
-                    hour_document_ref = (
-                        db.collection("chats")
-                        .document(CHANNEL_NAME)
-                        .collection(year)
-                        .document(month)
-                        .collection(day)
-                        .document(hour)
-                    )
+                    chat_log.append(chat_dict)
 
                     formatted_message = (
                         f"[{timestamp_formatted}] <{username}> {chat_message}"
@@ -249,7 +263,6 @@ async def receive_chat_messages():
 
                     print(formatted_message)
                     await forward_to_clients(json.dumps(chat_dict))
-
 
                     if hour_document_ref.get().exists:
                         hour_document_ref.update(
@@ -259,7 +272,6 @@ async def receive_chat_messages():
                         hour_document_ref.set(
                             {"chats": firestore.ArrayUnion([chat_dict])}
                         )
-
 
         except json.JSONDecodeError:
             print("Received data is not valid JSON.")
@@ -287,12 +299,12 @@ def shutdown_server(signum, frame):
 if __name__ == "__main__":
     # For local websocket server
 
-    server = websockets.serve(ws_handler, "0.0.0.0", 8080) # Start WebSocket Server
+    server = websockets.serve(ws_handler, "0.0.0.0", 8080)  # Start WebSocket Server
     # server = websockets.serve(ws_handler, "127.0.0.1", 8080)
     # server = websockets.serve(ws_handler, "localhost", 5678)
-    
+
     # start_server = websockets.serve(receive_chat_messages, "localhost", 8765)
-    
+
     loop = asyncio.get_event_loop()
     loop.create_task(receive_chat_messages())  # Twitch Chat Receiver
 

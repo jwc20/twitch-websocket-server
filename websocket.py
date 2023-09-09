@@ -67,7 +67,7 @@ def remove_stopwords(sentence):
 
 # TODO: modify based on the result of the model
 def preprocess_chat_message(sentence):
-    sentence = re.sub(r'@\w+', '', sentence)
+    sentence = re.sub(r"@\w+", "", sentence)
     sentence = sentence.lower()
     sentence = remove_stopwords(sentence)
     sentence = re.sub("[^a-zA-z0-9\s]", "", sentence)
@@ -120,7 +120,7 @@ async def receive_chat_messages():
         try:
             async with websockets.connect(websocket_url) as websocket:
                 # print(websocket_url)
-                
+
                 # TODO change to get access token
                 await websocket.send(f"PASS oauth:{token}")
                 await websocket.send(f"NICK justinfan123")  # for read-only
@@ -159,12 +159,18 @@ async def receive_chat_messages():
                     # koreaTimeNow_isoformatted = koreaTimeNow.isoformat()
                     # format the datetime object into a string
                     # koreaTimeNow_formatted  = koreaTimeNow_isoformatted.strftime(localFormat)
-                    
-                    remove_list = ['Fossabot', 'Nightbot', 'StreamElements', 'Streamlabs', 'OkayegBOT']
+
+                    remove_list = [
+                        "Fossabot",
+                        "Nightbot",
+                        "StreamElements",
+                        "Streamlabs",
+                        "OkayegBOT",
+                    ]
                     username = match_nick.group(1) if match_nick else ""
 
                     if any(x in username for x in remove_list):
-                        continue                                        
+                        continue
 
                     chat_message = match_chat.group(1) if match_chat else ""
                     preprocessed_chat_message = preprocess_chat_message(chat_message)
@@ -174,8 +180,6 @@ async def receive_chat_messages():
                     toxicity_boolean = (
                         True if vw_toxicity_score < 0.5 else False
                     )  # this may need adjustment
-
-
 
                     # DO NOT ERASE THIS:
                     # year, month, day, hour = timestamp.strftime('%Y'), timestamp.strftime('%m'), timestamp.strftime('%d'), timestamp.strftime('%H')
@@ -215,7 +219,7 @@ async def receive_chat_messages():
                     formatted_message = (
                         f"[{timestamp_formatted}] <{username}> {chat_message}"
                     )
-                    
+
                     print(formatted_message)
                     # print("        ",preprocessed_chat_message, toxicity_boolean)
 
@@ -227,8 +231,6 @@ async def receive_chat_messages():
                         hour_document_ref.set(
                             {"chats": firestore.ArrayUnion([chat_dict])}
                         )
-                    
-
 
         except Exception as e:
             print(f"WebSocket Error: {e}")
@@ -248,32 +250,6 @@ def save_chat_log_to_json():
 def shutdown_server(signum, frame):
     # save_chat_log_to_json()
     os._exit(0)
-
-
-# def spinning_cursor():
-#     while True:
-#         for cursor in '|/-\\':
-#             yield cursor
-
-# if __name__ == "__main__":
-#     # For local websocket server
-#     loop = asyncio.get_event_loop()
-#     loop.create_task(receive_chat_messages())  # Twitch Chat Receiver
-#     # server = websockets.serve(ws_handler, "0.0.0.0", 8080) # Start WebSocket Server
-#     server = websockets.serve(ws_handler, "127.0.0.1", 8080)
-#     # server = websockets.serve(ws_handler, "localhost", 5678)
-
-
-#     # register signal handler for graceful shutdown
-#     signal.signal(signal.SIGINT, shutdown_server)
-#     signal.signal(signal.SIGTERM, shutdown_server)
-
-#     print("Websocket server address: ", server)
-#     loop.run_until_complete(server)
-#     loop.run_forever()
-
-
-
 
 
 if __name__ == "__main__":

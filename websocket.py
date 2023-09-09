@@ -219,10 +219,6 @@ async def receive_chat_messages():
                     print(formatted_message)
                     # print("        ",preprocessed_chat_message, toxicity_boolean)
 
-                    # set write and update rate to 1.1 second to avoid firestore write limit
-                    await asyncio.sleep(1.1)
-                    
-
                     if hour_document_ref.get().exists:
                         hour_document_ref.update(
                             {"chats": firestore.ArrayUnion([chat_dict])}

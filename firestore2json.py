@@ -9,7 +9,7 @@ collection_ref = (
     .document(channel_name)
     .collection("2023")
     .document("09")
-    .collection("03")
+    .collection("08")
 )
 docs = collection_ref.stream()
 data = [doc.to_dict() for doc in docs]

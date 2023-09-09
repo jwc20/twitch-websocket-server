@@ -48,7 +48,7 @@ CLIENT_ID, CLIENT_SECRET = secret_manager.twitch_get_secret(
 # Twitch Configurations
 # CHANNEL_NAME = "sodapoppin"
 # CHANNEL_NAME = "zackrawrr"
-CHANNEL_NAME = "avoidingthepuddle"
+CHANNEL_NAME = "summit1g"
 
 # print(f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}")
 print(f"CONNECTING TO: {CHANNEL_NAME}'s CHAT")
@@ -110,6 +110,33 @@ async def get_oauth_token(client_id, client_secret):
             data = await response.json()
             return data["access_token"]
 
+
+async def forward_to_clients(message):
+    if clients:
+        tasks = [client.send(message) for client in clients]
+        await asyncio.gather(*tasks)
+    # for client in clients:
+    #     try:
+    #         await client.send(message)
+    #     except:
+    #         continue
+
+
+async def register_client(websocket):
+    clients.add(websocket)
+
+async def unregister_client(websocket):
+    clients.remove(websocket)
+
+async def ws_handler(websocket, path):
+    await register_client(websocket)
+    try:
+        async for message in websocket:
+            await forward_to_clients(message)
+    except:
+        pass
+    finally:
+        await unregister_client(websocket)
 
 async def receive_chat_messages():
     token = await get_oauth_token(CLIENT_ID, CLIENT_SECRET)
@@ -221,7 +248,8 @@ async def receive_chat_messages():
                     )
 
                     print(formatted_message)
-                    # print("        ",preprocessed_chat_message, toxicity_boolean)
+                    await forward_to_clients(formatted_message)
+
 
                     if hour_document_ref.get().exists:
                         hour_document_ref.update(
@@ -231,6 +259,10 @@ async def receive_chat_messages():
                         hour_document_ref.set(
                             {"chats": firestore.ArrayUnion([chat_dict])}
                         )
+
+
+        except json.JSONDecodeError:
+            print("Received data is not valid JSON.")
 
         except Exception as e:
             print(f"WebSocket Error: {e}")
@@ -254,6 +286,13 @@ def shutdown_server(signum, frame):
 
 if __name__ == "__main__":
     # For local websocket server
+
+    server = websockets.serve(ws_handler, "0.0.0.0", 8080) # Start WebSocket Server
+    # server = websockets.serve(ws_handler, "127.0.0.1", 8080)
+    # server = websockets.serve(ws_handler, "localhost", 5678)
+    
+    # start_server = websockets.serve(receive_chat_messages, "localhost", 8765)
+    
     loop = asyncio.get_event_loop()
     loop.create_task(receive_chat_messages())  # Twitch Chat Receiver
 
@@ -261,4 +300,6 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, shutdown_server)
     signal.signal(signal.SIGTERM, shutdown_server)
 
+    print("Websocket server address: ", server)
+    loop.run_until_complete(server)
     loop.run_forever()

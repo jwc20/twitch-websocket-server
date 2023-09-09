@@ -248,7 +248,7 @@ async def receive_chat_messages():
                     )
 
                     print(formatted_message)
-                    await forward_to_clients(formatted_message)
+                    await forward_to_clients(json.dumps(chat_dict))
 
 
                     if hour_document_ref.get().exists:

@@ -49,9 +49,9 @@ CLIENT_ID, CLIENT_SECRET = secret_manager.twitch_get_secret(
 
 
 # Twitch Configurations
-# CHANNEL_NAME = "sodapoppin"
+CHANNEL_NAME = "sodapoppin"
 # CHANNEL_NAME = "zackrawrr"
-CHANNEL_NAME = "summit1g"
+# CHANNEL_NAME = "summit1g"
 
 # print(f"CLIENT_ID: {CLIENT_ID}, CLIENT_SECRET: {CLIENT_SECRET}")
 print(f"CONNECTING TO: {CHANNEL_NAME}'s CHAT")
@@ -176,7 +176,7 @@ async def receive_chat_messages():
 
                     # set timestamp1 to korean time zone
 
-                    timestamp = datetime.now()
+                    timestamp = datetime.utcnow()
                     timestamp_isoformatted = timestamp.isoformat()
                     timestamp_formatted = timestamp.strftime("%H:%M:%S")
 
@@ -215,15 +215,15 @@ async def receive_chat_messages():
                     )  # this may need adjustment
 
                     # DO NOT ERASE THIS:
-                    # year, month, day, hour = timestamp.strftime('%Y'), timestamp.strftime('%m'), timestamp.strftime('%d'), timestamp.strftime('%H')
+                    year, month, day, hour = timestamp.strftime('%Y'), timestamp.strftime('%m'), timestamp.strftime('%d'), timestamp.strftime('%H')
 
                     # Need this for firestore timestamp
-                    year, month, day, hour = (
-                        koreaTimeNow.strftime("%Y"),
-                        koreaTimeNow.strftime("%m"),
-                        koreaTimeNow.strftime("%d"),
-                        koreaTimeNow.strftime("%H"),
-                    )
+                    # year, month, day, hour = (
+                    #     koreaTimeNow.strftime("%Y"),
+                    #     koreaTimeNow.strftime("%m"),
+                    #     koreaTimeNow.strftime("%d"),
+                    #     koreaTimeNow.strftime("%H"),
+                    # )
 
                     hour_document_ref = (
                         db.collection("chats")

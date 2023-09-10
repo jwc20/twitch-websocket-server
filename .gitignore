@@ -1,3 +1,5 @@
+ssl_cert.pem
+ssl_key.pem
 .vscode
 
 omfscene24-firebase-adminsdk-j15tw-d6d49b9999.json

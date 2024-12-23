@@ -7,6 +7,8 @@
 - [ ](https://github.com/googleapis/google-cloud-python/issues/7709)
 - [ ] Create websocket server for realtime chat client.
 - [ ] refactor 
+- [ ] Implement functions from get-twitch-emotes to remove emotes when preprocessing.
+
 
 
 ## Client  

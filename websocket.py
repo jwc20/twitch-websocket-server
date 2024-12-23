@@ -7,14 +7,11 @@ import signal
 import json
 from google.cloud import firestore
 import hashlib
-
-
 import pandas as pd
 import websockets
 import re
 import subprocess
 from datetime import datetime
-
 import spacy
 
 nlp = spacy.load("en_core_web_sm")
@@ -25,11 +22,9 @@ nlp = en_core_web_sm.load()
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
-
 import pytz
-
 import secret_manager
-
+import ssl
 
 # Use a service account. firebase
 cred = credentials.Certificate("credentials.json")
@@ -152,7 +147,7 @@ async def receive_chat_messages():
     while True:
         try:
             async with websockets.connect(websocket_url) as websocket:
-                # print(websocket_url)
+                print(websocket_url)
 
                 # TODO change to get access token
                 await websocket.send(f"PASS oauth:{token}")
@@ -296,19 +291,21 @@ def shutdown_server(signum, frame):
     os._exit(0)
 
 
+
 if __name__ == "__main__":
     # For local websocket server
 
-    server = websockets.serve(ws_handler, "0.0.0.0", 8080)  # Start WebSocket Server
-    # server = websockets.serve(ws_handler, "127.0.0.1", 8080)
-    # server = websockets.serve(ws_handler, "localhost", 5678)
+    # Create an SSL context
+    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ssl_context.load_cert_chain(certfile="ssl_cert.pem", keyfile="ssl_key.pem")
 
-    # start_server = websockets.serve(receive_chat_messages, "localhost", 8765)
+    # Use the SSL context in the websockets.serve() function
+    server = websockets.serve(ws_handler, "0.0.0.0", 8080, ssl=ssl_context)
 
     loop = asyncio.get_event_loop()
     loop.create_task(receive_chat_messages())  # Twitch Chat Receiver
 
-    # register signal handler for graceful shutdown
+    # Register signal handler for graceful shutdown
     signal.signal(signal.SIGINT, shutdown_server)
     signal.signal(signal.SIGTERM, shutdown_server)
 

@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  twitch-chat:
+    build: .
+    container_name: twitch-chat-bot
+    restart: unless-stopped
+    environment:
+      - TWITCH_CLIENT_ID=${TWITCH_CLIENT_ID}
+      - TWITCH_CLIENT_SECRET=${TWITCH_CLIENT_SECRET}
+    volumes:
+      - ./credentials.json:/app/credentials.json:ro
+      - ./.env:/app/.env:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

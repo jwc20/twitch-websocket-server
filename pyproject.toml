@@ -1,7 +1,7 @@
 [project]
-name = "twitch-websocket-server"
+name = "twitch2firebase-websocket-server"
 version = "0.1.0"
-description = "Add your description here"
+description = "A websocket server that listens to Twitch chat and sends messages to Firebase."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

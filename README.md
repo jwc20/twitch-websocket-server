@@ -1,26 +1,47 @@
-# twitch-websocket-server
+# twitch2firestore-websocket-server
+
+A websocket server that listens to Twitch chat messages and stores them in Firestore.
+
+### Installation
 
 First, install the required dependencies.
 
+You can install the dependencies by running the following command in the root directory.
+
 ```bash
+# start a virtual environment and install the dependencies
 pip install -r requirements.txt
+
+# or if you are using astral-sh/uv
+uv run websocket.py
 ```
 
-Install [spacy](https://spacy.io/usage)
 
-```bash
-pip install -U pip setuptools wheel
-pip install -U spacy # pip install -U 'spacy[apple]' for Mac M1
-python -m spacy download en_core_web_sm
-```
 
 Create a .env file in the root directory and set up the environment variables.
 
 ```
 # .env
+
+# Twitch
 TWITCH_CLIENT_ID = {YOUR_CLIENT_ID}
 TWITCH_CLIENT_SECRET = {YOUR_CLIENT_SECRET}
+
+# Firebase Project ID
+PROJECT_ID = {YOUR_PROJECT_ID}
 ```
+
+
+Download the service account key from Firebase and save it as `credentials.json` in the root directory.
+
+
+
+
+
+
+
+
+
 
 Then start the server.
 
@@ -36,9 +57,4 @@ python websocket.py
 -   aiohttp
 -   websockets
 -   firebase_admin
--   pandas
--   spacy
 
-### Other tools
-
-- Vowpal Wabbit

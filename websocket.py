@@ -3,10 +3,9 @@ import re
 import asyncio
 import aiohttp
 import websockets
-import signal
 import json
 import hashlib
-from datetime import datetime
+from datetime import datetime, UTC
 from dotenv import load_dotenv
 import firebase_admin
 from firebase_admin import credentials
@@ -19,17 +18,12 @@ db = firestore.client()
 
 # Load environment variables
 load_dotenv()
-PROJECT_ID = os.getenv("PROJECT_ID")
 TWITCH_CLIENT_SECRET = os.getenv("TWITCH_CLIENT_SECRET")
 TWITCH_CLIENT_ID = os.getenv("TWITCH_CLIENT_ID")
 
 # Twitch Configurations
 CHANNEL_NAME = "sodapoppin"
 print(f"CONNECTING TO: {CHANNEL_NAME}'s CHAT")
-
-# Client Set for Websockets
-clients = set()
-chat_log = []
 
 
 async def get_oauth_token(client_id, client_secret):
@@ -38,29 +32,6 @@ async def get_oauth_token(client_id, client_secret):
         async with session.post(url) as response:
             data = await response.json()
             return data["access_token"]
-
-
-async def forward_to_clients(message):
-    if clients:
-        tasks = [client.send(message) for client in clients]
-        await asyncio.gather(*tasks)
-
-
-async def register_client(websocket):
-    clients.add(websocket)
-
-
-async def unregister_client(websocket):
-    clients.remove(websocket)
-
-
-async def ws_handler(websocket, path):
-    await register_client(websocket)
-    try:
-        async for message in websocket:
-            await forward_to_clients(message)
-    finally:
-        await unregister_client(websocket)
 
 
 async def receive_chat_messages():
@@ -90,31 +61,12 @@ async def receive_chat_messages():
                     match_nick = re.search(r"@(\w+)\.tmi\.twitch\.tv", message)
                     match_chat = re.search(r"PRIVMSG #\w+ :(.*)", message)
 
-                    timestamp = datetime.utcnow()
-                    timestamp_isoformatted = timestamp.isoformat()
+                    timestamp = datetime.now(UTC)
+                    timestamp_iso_formatted = timestamp.isoformat()
                     timestamp_formatted = timestamp.strftime("%H:%M:%S")
 
-                    remove_list = [
-                        "Fossabot",
-                        "Nightbot",
-                        "StreamElements",
-                        "Streamlabs",
-                        "OkayegBOT",
-                    ]
                     username = match_nick.group(1) if match_nick else ""
-
-                    if any(x in username for x in remove_list):
-                        continue
-
                     chat_message = match_chat.group(1) if match_chat else ""
-
-                    # Note: These functions need to be implemented or removed
-                    # preprocessed_chat_message = preprocess_chat_message(chat_message)
-                    # vw_toxicity_score = await predict_toxicity(preprocessed_chat_message)
-                    preprocessed_chat_message = chat_message  # Temporary placeholder
-                    vw_toxicity_score = 1.0  # Temporary placeholder
-
-                    toxicity_boolean = True if vw_toxicity_score < 0.5 else False
 
                     year, month, day, hour = timestamp.strftime('%Y'), timestamp.strftime('%m'), timestamp.strftime(
                         '%d'), timestamp.strftime('%H')
@@ -134,21 +86,12 @@ async def receive_chat_messages():
                         "chat_id": hash,
                         "username": username,
                         "chat_message": chat_message,
-                        "preprocessed_chat_message": preprocessed_chat_message,
-                        "timestamp": timestamp_isoformatted,
-                        "vw_toxicity_score": vw_toxicity_score,
-                        "is_toxic": toxicity_boolean,
+                        "timestamp": timestamp_iso_formatted,
                         "channel_name": CHANNEL_NAME,
-                        "last_labeler": "",
-                        "last_label_timestamp": "",
-                        "labeler_list": [],
                     }
-
-                    chat_log.append(chat_dict)
 
                     formatted_message = f"[{timestamp_formatted}] <{username}> {chat_message}"
                     print(formatted_message)
-                    await forward_to_clients(json.dumps(chat_dict))
 
                     if hour_document_ref.get().exists:
                         hour_document_ref.update(
@@ -168,23 +111,8 @@ async def receive_chat_messages():
             await asyncio.sleep(5)
 
 
-def save_chat_log_to_json():
-    now = datetime.now()
-    formatted_date_time = now.strftime("%Y%m%d_%H%M")
-    chat_log_filename = f"{CHANNEL_NAME}_chatlog_{formatted_date_time}.json"
-    with open(chat_log_filename, "w") as file:
-        json.dump(chat_log, file)
-
-
 async def main():
-    # Start the websocket server
-    server = await websockets.serve(ws_handler, "0.0.0.0", 8080)
-
-    # Start the chat message receiver
     await receive_chat_messages()
-
-    # Keep the server running
-    await server.wait_closed()
 
 
 if __name__ == "__main__":
@@ -192,4 +120,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         print("Shutting down...")
-        save_chat_log_to_json()

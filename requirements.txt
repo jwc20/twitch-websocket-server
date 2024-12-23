@@ -3,7 +3,4 @@ python-dotenv
 asyncio
 aiohttp
 websockets
-vowpal-wabbit-next
 firebase_admin
-pandas
-google-cloud-secret-manager

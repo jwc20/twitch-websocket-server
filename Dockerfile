@@ -1,4 +1,3 @@
-# Dockerfile
 FROM python:3.11-slim
 
 # Set working directory
@@ -21,4 +20,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Run the application
-CMD ["python", "main.py"]
+CMD ["python", "websocket.py"]

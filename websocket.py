@@ -7,6 +7,7 @@ import json
 import hashlib
 from datetime import datetime, UTC
 from dotenv import load_dotenv
+
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
@@ -16,7 +17,7 @@ cred = credentials.Certificate("./credentials.json")
 app = firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-# Load environment variables
+# Load environment variables from .env file
 load_dotenv()
 TWITCH_CLIENT_SECRET = os.getenv("TWITCH_CLIENT_SECRET")
 TWITCH_CLIENT_ID = os.getenv("TWITCH_CLIENT_ID")
@@ -52,6 +53,8 @@ async def receive_chat_messages():
                 while True:
                     message = await websocket.recv()
                     message = message.strip().replace("\n", "")
+                    hash = hashlib.sha256(message.encode("utf-8")).hexdigest()
+
                     if not after_end_of_names:
                         match = re.search(r":End of /NAMES list", message)
                         if match:
@@ -61,15 +64,20 @@ async def receive_chat_messages():
                     match_nick = re.search(r"@(\w+)\.tmi\.twitch\.tv", message)
                     match_chat = re.search(r"PRIVMSG #\w+ :(.*)", message)
 
-                    timestamp = datetime.now(UTC)
-                    timestamp_iso_formatted = timestamp.isoformat()
-                    timestamp_formatted = timestamp.strftime("%H:%M:%S")
-
                     username = match_nick.group(1) if match_nick else ""
                     chat_message = match_chat.group(1) if match_chat else ""
 
-                    year, month, day, hour = timestamp.strftime('%Y'), timestamp.strftime('%m'), timestamp.strftime(
-                        '%d'), timestamp.strftime('%H')
+                    timestamp = datetime.now(UTC)
+                    timestamp_iso_formatted = timestamp.isoformat()
+                    year, month, day, hour = (
+                        timestamp.strftime("%Y"),
+                        timestamp.strftime("%m"),
+                        timestamp.strftime("%d"),
+                        timestamp.strftime("%H"),
+                    )
+
+                    # formatted_message = f"[{timestamp_formatted}] <{username}> {chat_message}"
+                    # print(formatted_message)
 
                     hour_document_ref = (
                         db.collection("chats")
@@ -80,8 +88,6 @@ async def receive_chat_messages():
                         .document(hour)
                     )
 
-                    hash = hashlib.sha256(message.encode('utf-8')).hexdigest()
-
                     chat_dict = {
                         "chat_id": hash,
                         "username": username,
@@ -89,9 +95,6 @@ async def receive_chat_messages():
                         "timestamp": timestamp_iso_formatted,
                         "channel_name": CHANNEL_NAME,
                     }
-
-                    formatted_message = f"[{timestamp_formatted}] <{username}> {chat_message}"
-                    print(formatted_message)
 
                     if hour_document_ref.get().exists:
                         hour_document_ref.update(

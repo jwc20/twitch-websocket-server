@@ -12,12 +12,7 @@ import websockets
 import re
 import subprocess
 from datetime import datetime
-import spacy
 
-nlp = spacy.load("en_core_web_sm")
-import en_core_web_sm
-
-nlp = en_core_web_sm.load()
 
 import firebase_admin
 from firebase_admin import credentials
@@ -74,31 +69,6 @@ def preprocess_chat_message(sentence):
     sentence = re.sub(" +", " ", sentence).strip()
     return sentence
 
-
-async def predict_toxicity(preprocessed_chat_message, model_path="model.vw"):
-    """Predict the toxicity of a message using Vowpal Wabbit."""
-    vw_formatted_message = f"|text {preprocessed_chat_message}"
-
-    # Run VW for prediction
-    result = subprocess.run(
-        [
-            "vw",
-            "--quiet",
-            "-i",
-            model_path,
-            "-t",
-            "--predictions",
-            "/dev/stdout",
-            "--link",
-            "logistic",
-        ],
-        input=vw_formatted_message.encode("utf-8"),
-        capture_output=True,
-    )
-
-    # Parse the output to get prediction
-    prediction = float(result.stdout.decode("utf-8").strip())
-    return prediction
 
 
 async def get_oauth_token(client_id, client_secret):

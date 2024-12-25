@@ -2,12 +2,6 @@ import json
 from google.cloud import firestore
 from datetime import datetime
 
-import dotenv
-import supabase
-
-from pprint import pprint as pp
-
-dotenv.load_dotenv()
 channel_name = "sodapoppin"
 
 db = firestore.Client.from_service_account_json("./credentials.json")
@@ -23,6 +17,12 @@ docs = collection_ref.stream()
 data = [chat for doc in docs for chat in doc.to_dict().get("chats", [])]
 
 
-pp(data)
+filename = channel_name + "_chat_" + datetime.now().strftime("%Y-%m-%d_%H-%M") + ".json"
+with open(filename, "w") as outfile:
+    length = len(data)
+    json.dump(data, outfile, ensure_ascii=False)
+
+    print(f"chats {length} recorder to {filename}")
+
 
 
